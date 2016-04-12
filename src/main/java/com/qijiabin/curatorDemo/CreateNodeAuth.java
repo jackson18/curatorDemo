@@ -28,9 +28,18 @@ public class CreateNodeAuth {
 
 	public static void main(String[] args) throws Exception {
 		RetryPolicy retryPolicy = new RetryNTimes(5, 1000);
-		CuratorFramework zkClient = CuratorFrameworkFactory.newClient("192168.1.66:2181", retryPolicy);
+		CuratorFramework zkClient = CuratorFrameworkFactory
+				.builder()
+				.connectString("192.168.1.66:2181")
+				.sessionTimeoutMs(5000)
+				.connectionTimeoutMs(5000)
+				.retryPolicy(retryPolicy)
+				.authorization("digest", "node1:123456".getBytes())//授权
+				.build();
 		zkClient.start();
 		
+		
+		//ACL认证
 		List<ACL> acls = new ArrayList<ACL>();
 		ACL aclIp = new ACL(Perms.READ, new Id("ip", "192.168.1.87"));
 		ACL aclDigest = new ACL(Perms.READ|Perms.WRITE, new Id("digest", DigestAuthenticationProvider.generateDigest("node1:123456")));
@@ -38,8 +47,11 @@ public class CreateNodeAuth {
 		acls.add(aclDigest);
 		
 		String path = zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
-				.withACL(acls).forPath("/node1/data1", "hello".getBytes());
+				.withACL(acls).forPath("/node1/data3", "hello".getBytes());
 		System.out.println(path);
+		
+		byte[] data = zkClient.getData().forPath("/node1/data3");
+		System.out.println(new String(data));
 	}
 	
 }
